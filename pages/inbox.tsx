@@ -1,8 +1,8 @@
 import { Box } from '@chakra-ui/react'
 import { AppLayout } from '../components/app-layout'
 
-const Home = () => {
-	return <AppLayout title='Home'></AppLayout>
+const Inbox = () => {
+	return <AppLayout title='Inbox'></AppLayout>
 }
 
-export default Home
+export default Inbox
