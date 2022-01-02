@@ -1,111 +1,106 @@
 import {
 	Avatar,
 	Box,
-	Button,
 	Divider,
+	Drawer,
+	DrawerBody,
+	DrawerContent,
+	DrawerHeader,
+	DrawerOverlay,
 	Flex,
 	HStack,
-	Link,
+	IconButton,
 	Text,
+	useDisclosure,
 	VStack,
 } from '@chakra-ui/react'
+import {
+	CalendarIcon,
+	InboxIcon,
+	MenuIcon,
+	UserIcon,
+} from '@heroicons/react/outline'
 import NextLink from 'next/link'
 import { useRouter } from 'next/router'
-import { FC, ReactNode } from 'react'
-import { InboxIcon, CalendarIcon } from '@heroicons/react/outline'
+import { FC, ReactElement, ReactNode } from 'react'
 
 export const AppLayout: FC<{ title?: string; toolbar?: ReactNode }> = (
 	props
 ) => {
+	const { isOpen, onOpen, onClose } = useDisclosure()
 	return (
-		<Flex bg='white' w='100vw' minH='100vh' flexDir={'column'}>
-			<Flex
-				h='16'
-				alignItems='center'
-				// borderBottom='1px solid'
-				// borderBottomColor='gray.200'
-				shadow={'sm'}
-			>
-				<Box maxW='250px' w='100%' px='4'>
-					<Text fontSize='xl' fontWeight='bold'>
-						TASKAPP
-					</Text>
-				</Box>
-				<Flex
-					justifyContent={{ base: 'flex-end' }}
-					alignItems='center'
-					px='4'
-					flex='1'
-				>
-					<NextLink href='/settings/account' passHref>
-						<HStack
-							as='a'
-							spacing={{ base: 0, sm: 4 }}
-							p='2'
-							border='1px solid transparent'
-							rounded='md'
-							cursor={'pointer'}
-							_hover={{
-								bg: 'gray.100',
-							}}
-						>
-							<Text
-								d={{ base: 'none', sm: 'block' }}
-								fontSize='sm'
-								color='gray.500'
-							>
-								Deddy Wolley
-							</Text>
-							<Avatar name='Deddy Wolley' size='sm' />
-						</HStack>
-					</NextLink>
+		<Flex w='100vw' h='100vh' overflow='hidden'>
+			<Drawer placement='left' onClose={onClose} isOpen={isOpen}>
+				<DrawerOverlay />
+				<DrawerContent>
+					<Sidebar />
+				</DrawerContent>
+			</Drawer>
+			<SidebarWrapper>
+				<Sidebar />
+			</SidebarWrapper>
+			<Main>
+				<Flex p='4' justifyContent='space-between' alignItems='center'>
+					<Text fontSize='2xl'>{props.title}</Text>
+					<IconButton
+						display={{ base: 'flex', md: 'none' }}
+						onClick={onOpen}
+						icon={<MenuIcon width='24px' height='24px' />}
+						aria-label='menu button'
+					/>
+					{props.toolbar}
 				</Flex>
-			</Flex>
-			<Flex flex='1'>
-				<Flex as='nav' w='250px' d={{ base: 'none', sm: 'block' }}>
-					<VStack p='4' w='100%'>
-						<NavButton href='/'>
-							<Box mr='2'>
-								<InboxIcon color='current' width={24} height={24} />
-							</Box>
-							Inbox
-						</NavButton>
-						<NavButton href='/today'>
-							<Box mr='2'>
-								<CalendarIcon color='current' width={24} height={24} />
-							</Box>
-							Today
-						</NavButton>
-						<NavButton href='/scheduled'>
-							<Box mr='2'>
-								<CalendarIcon color='current' width={24} height={24} />
-							</Box>
-							Scheduled
-						</NavButton>
-					</VStack>
-					<Box px='4'>
-						<Divider />
-					</Box>
-					<VStack p='4' w='100%'></VStack>
-				</Flex>
-				<Flex as='main' flex='1' w='100%' flexDir={'column'}>
-					<Flex p='4' alignItems='center' justifyContent='space-between'>
-						<Text fontSize='xl' fontWeight='bold'>
-							{props.title}
-						</Text>
-						<Box>{props.toolbar}</Box>
-					</Flex>
-					<Box px='4'>
-						<Divider />
-					</Box>
-					{props.children}
-				</Flex>
-			</Flex>
+				{props.children}
+			</Main>
 		</Flex>
 	)
 }
 
-const NavButton: FC<{ href: string }> = (props) => {
+const Sidebar = () => {
+	return (
+		<Box p='4' minH='100%' w='100%'>
+			<Box>
+				<Text fontSize='2xl' fontWeight='bold'>
+					Task App
+				</Text>
+			</Box>
+			<Divider my='4' />
+			<NavButton icon={<InboxIcon width='24px' height='24px' />} href='/'>
+				Home
+			</NavButton>
+			<NavButton
+				icon={<UserIcon width='24px' height='24px' />}
+				href='/settings/account'
+			>
+				Account
+			</NavButton>
+		</Box>
+	)
+}
+
+const SidebarWrapper: FC = (props) => {
+	return (
+		<Flex
+			display={{ base: 'none', md: 'flex' }}
+			borderRight='1px solid'
+			borderColor='gray.200'
+			w='250px'
+			h='100vh'
+		>
+			{props.children}
+		</Flex>
+	)
+}
+
+const Main: FC = (props) => {
+	return (
+		<Flex flex='1' overflowY='hidden' h='100vh' flexDir='column'>
+			{props.children}
+		</Flex>
+	)
+}
+
+const NavButton: FC<{ href: string; icon: ReactElement }> = (props) => {
 	const router = useRouter()
 	const isActive = router.pathname === props.href
 	return (
@@ -124,6 +119,7 @@ const NavButton: FC<{ href: string }> = (props) => {
 				lineHeight='14px'
 				fontSize='sm'
 			>
+				{props.icon && <Box mr='2'>{props.icon}</Box>}
 				{props.children}
 			</Flex>
 		</NextLink>
