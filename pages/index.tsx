@@ -5,6 +5,7 @@ import {
 	chakra,
 	Checkbox,
 	Flex,
+	HStack,
 	Input,
 	StackDivider,
 	Text,
@@ -49,9 +50,17 @@ const Home = () => {
 				<AppBox p='4' flex='2'>
 					<Flex justifyContent='space-between' mb='4'>
 						<Text fontWeight='bold'>Lorem, ipsum.</Text>
-						<Button size='xs' justifyContent='flex-start'>
-							+ Task
-						</Button>
+						<HStack spacing='2'>
+							<Button size='xs' justifyContent='flex-start'>
+								+ Task
+							</Button>
+							<Button variant='outline' size='xs' justifyContent='flex-start'>
+								Delete
+							</Button>
+							<Button variant='outline' size='xs' justifyContent='flex-start'>
+								Edit Label
+							</Button>
+						</HStack>
 					</Flex>
 					<VStack spacing='0' alignItems='stretch'>
 						<TaskItem label='Todo for today' />
@@ -87,7 +96,13 @@ const AppBox = chakra((props) => {
 const TaskItem = (props: { label: string; completed?: boolean }) => {
 	return (
 		<Flex rounded='md' pos='relative' alignItems='center'>
-			<Checkbox mr='4' pos='absolute' left='2' zIndex={10} />
+			<Checkbox
+				colorScheme='blackAlpha'
+				mr='4'
+				pos='absolute'
+				left='2'
+				zIndex={10}
+			/>
 			<Input
 				defaultValue={props.label}
 				bg='transparent'
