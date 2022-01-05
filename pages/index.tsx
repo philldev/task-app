@@ -37,21 +37,19 @@ import {
 import { DotsHorizontalIcon, LogoutIcon } from '@heroicons/react/outline'
 import { Spinner } from 'components/spinner'
 import { useAuth } from 'context/auth.context'
+import { AppUser } from 'db/users/users'
+import { db } from 'firebase.config'
+import { doc } from 'firebase/firestore'
 import { useSignOut } from 'hooks/auth/signout'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { FC, useEffect, useRef, useState } from 'react'
+import { useDocumentData } from 'react-firebase-hooks/firestore'
 
 const Home = () => {
 	const { state } = useAuth()
 	const loading = state.status === 'Loading'
 	const router = useRouter()
-
-	const signout = useSignOut()
-
-	const onLogout = async () => {
-		signout()
-	}
 
 	useEffect(() => {
 		if (state.status === 'NotLoggedIn') router.push('/login')
@@ -82,66 +80,7 @@ const Home = () => {
 							justifyContent='space-between'
 						>
 							<Text fontWeight='bold'>Task App</Text>
-							<Flex
-								p='2'
-								rounded='md'
-								border='1px solid'
-								borderColor='gray.100'
-								display={{ base: 'none', md: 'flex' }}
-								alignItems='center'
-							>
-								<Text mr='2' fontSize='xs'>
-									Deddy Wolley
-								</Text>
-								<Avatar size='xs' name='Deddy Wolley' />
-								<Divider orientation='vertical' h='6' mx='4' />
-								<Button
-									variant='ghost'
-									leftIcon={<LogoutIcon width='14px' height='14px' />}
-									size='sm'
-									onClick={onLogout}
-								>
-									Logout
-								</Button>
-							</Flex>
-							<Menu>
-								<MenuButton
-									p='2'
-									rounded='md'
-									border='1px solid'
-									borderColor='gray.100'
-									display={{ base: 'flex', md: 'none' }}
-								>
-									<Flex alignItems='center'>
-										<Text
-											mr='2'
-											fontSize='xs'
-											visibility={{ base: 'hidden', md: 'visible' }}
-											display={{ base: 'none', md: 'block' }}
-										>
-											Deddy Wolley
-										</Text>
-										<Avatar size='xs' name='Deddy Wolley' />
-									</Flex>
-								</MenuButton>
-								<MenuList>
-									<Text
-										py='2'
-										px='4'
-										visibility={{ md: 'hidden', base: 'visible' }}
-										display={{ md: 'none', base: 'block' }}
-									>
-										Deddy Wolley
-									</Text>
-									<Divider />
-									<MenuItem
-										onClick={onLogout}
-										icon={<LogoutIcon width='20px' height='20px' />}
-									>
-										Logout
-									</MenuItem>
-								</MenuList>
-							</Menu>
+							<UserBox />
 						</Flex>
 					</Box>
 					<Flex
@@ -172,6 +111,87 @@ const AppBox = chakra((props) => {
 		></Box>
 	)
 })
+
+const UserBox = () => {
+	const auth = useAuth()
+	const signout = useSignOut()
+
+	const onLogout = async () => {
+		signout()
+	}
+
+	const [value, loading, error] = useDocumentData<AppUser>(
+		auth.state.user && doc(db, 'users', auth.state.user?.uid!),
+		{
+			idField: 'id',
+		}
+	)
+
+	return (
+		<>
+			<Flex
+				p='2'
+				rounded='md'
+				border='1px solid'
+				borderColor='gray.100'
+				display={{ base: 'none', md: 'flex' }}
+				alignItems='center'
+			>
+				<Text mr='2' fontSize='xs'>
+					{value?.username}
+				</Text>
+				<Avatar size='xs' src={value?.photoURL} name={value?.username} />
+				<Divider orientation='vertical' h='6' mx='4' />
+				<Button
+					variant='ghost'
+					leftIcon={<LogoutIcon width='14px' height='14px' />}
+					size='sm'
+					onClick={onLogout}
+				>
+					Logout
+				</Button>
+			</Flex>
+			<Menu>
+				<MenuButton
+					p='2'
+					rounded='md'
+					border='1px solid'
+					borderColor='gray.100'
+					display={{ base: 'flex', md: 'none' }}
+				>
+					<Flex alignItems='center'>
+						<Text
+							mr='2'
+							fontSize='xs'
+							visibility={{ base: 'hidden', md: 'visible' }}
+							display={{ base: 'none', md: 'block' }}
+						>
+							{value?.username}
+						</Text>
+						<Avatar size='xs' name={value?.username} src={value?.photoURL} />
+					</Flex>
+				</MenuButton>
+				<MenuList>
+					<Text
+						py='2'
+						px='4'
+						visibility={{ md: 'hidden', base: 'visible' }}
+						display={{ md: 'none', base: 'block' }}
+					>
+						{value?.username}
+					</Text>
+					<Divider />
+					<MenuItem
+						onClick={onLogout}
+						icon={<LogoutIcon width='20px' height='20px' />}
+					>
+						Logout
+					</MenuItem>
+				</MenuList>
+			</Menu>
+		</>
+	)
+}
 
 const TaskListBox = () => {
 	const [isCreating, setIsCreating] = useState(false)
