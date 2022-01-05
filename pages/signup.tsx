@@ -10,8 +10,13 @@ import {
 	Text,
 } from '@chakra-ui/react'
 import { yupResolver } from '@hookform/resolvers/yup'
+import { FirebaseError } from 'firebase/app'
+import { useSignup } from 'hooks/auth/signup'
 import NextLink from 'next/link'
+import { useRouter } from 'next/router'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { getAuthErrorMessage } from 'utils/auth/get-auth-error-message'
 import * as y from 'yup'
 import { AuthLayout } from '../components/auth-layout'
 
@@ -31,6 +36,7 @@ const Signup = () => {
 
 const SignupForm = () => {
 	const schema = y.object({
+		username: y.string().required('username is required'),
 		email: y.string().email('invalid email').required('email is Required'),
 		password: y
 			.string()
@@ -39,8 +45,41 @@ const SignupForm = () => {
 	})
 
 	type SignupSchema = {
+		username: string
 		email: string
 		password: string
+	}
+
+	const signup = useSignup()
+
+	const [state, setState] = useState<
+		| {
+				status: 'loading'
+				error: null
+		  }
+		| {
+				status: 'error'
+				error: string
+		  }
+		| { status: 'idle'; error: null }
+		| { status: 'success'; error: null }
+	>({ status: 'idle', error: null })
+
+	const router = useRouter()
+
+	const onSubmit = async (data: SignupSchema) => {
+		try {
+			setState({ status: 'loading', error: null })
+			await signup(data.username, data.email, data.password)
+			router.replace('/')
+		} catch (error) {
+			if (error instanceof FirebaseError) {
+				const err = getAuthErrorMessage(error)
+				setState({ status: 'error', error: err })
+			} else {
+				setState({ status: 'error', error: 'something went wrong' })
+			}
+		}
 	}
 
 	const {
@@ -51,14 +90,21 @@ const SignupForm = () => {
 		resolver: yupResolver(schema),
 	})
 
-	const onSubmit = (data: SignupSchema) => {
-		console.log(data)
-	}
-
 	return (
 		<form onSubmit={handleSubmit(onSubmit)}>
 			<Grid gap='3'>
 				<Grid gap='2'>
+					<FormControl isInvalid={Boolean(errors.username)}>
+						<FormLabel htmlFor='name'>Username</FormLabel>
+						<Input
+							id='username'
+							placeholder='enter your username'
+							{...register('username')}
+						/>
+						<FormErrorMessage>
+							{errors.username && errors.username.message}
+						</FormErrorMessage>
+					</FormControl>
 					<FormControl isInvalid={Boolean(errors.email)}>
 						<FormLabel htmlFor='name'>Email</FormLabel>
 						<Input
@@ -85,10 +131,17 @@ const SignupForm = () => {
 					</FormControl>
 				</Grid>
 				<Flex w='100%' justifyContent={'flex-end'}>
-					<Button ml='auto' type='submit'>
+					<Button
+						loading={state.status === 'loading'}
+						w='full'
+						colorScheme='telegram'
+						mt='5'
+						type='submit'
+					>
 						Signup
 					</Button>
 				</Flex>
+				<Text color='red.500'>{state.error}</Text>
 			</Grid>
 		</form>
 	)

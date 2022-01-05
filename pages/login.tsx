@@ -10,8 +10,14 @@ import {
 	Text,
 } from '@chakra-ui/react'
 import { yupResolver } from '@hookform/resolvers/yup'
+import { FirebaseError } from 'firebase/app'
+import { useSignIn } from 'hooks/auth/signin'
+import { useSignInWithProvider } from 'hooks/auth/signin-with-provider'
 import NextLink from 'next/link'
+import { useRouter } from 'next/router'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { getAuthErrorMessage } from 'utils/auth/get-auth-error-message'
 import * as y from 'yup'
 import { AuthLayout } from '../components/auth-layout'
 
@@ -51,13 +57,43 @@ const LoginForm = () => {
 		resolver: yupResolver(schema),
 	})
 
-	const onSubmit = (data: LoginSchema) => {
-		console.log(data)
+	const signIn = useSignIn()
+
+	const [state, setState] = useState<
+		| {
+				status: 'loading'
+				error: null
+		  }
+		| {
+				status: 'error'
+				error: string
+		  }
+		| { status: 'idle'; error: null }
+		| { status: 'success'; error: null }
+	>({ status: 'idle', error: null })
+
+	const router = useRouter()
+
+	const onSubmit = async (data: LoginSchema) => {
+		try {
+			setState({ status: 'loading', error: null })
+			await signIn(data.email, data.password)
+			router.replace('/')
+		} catch (error) {
+			if (error instanceof FirebaseError) {
+				const err = getAuthErrorMessage(error)
+				setState({ status: 'error', error: err })
+			} else {
+				setState({ status: 'error', error: 'something went wrong' })
+			}
+		}
 	}
 
+	const { signIn: googleSignIn } = useSignInWithProvider('google')
+
 	return (
-		<form onSubmit={handleSubmit(onSubmit)}>
-			<Grid gap='3'>
+		<Grid gap='6'>
+			<form onSubmit={handleSubmit(onSubmit)}>
 				<Grid gap='2'>
 					<FormControl isInvalid={Boolean(errors.email)}>
 						<FormLabel htmlFor='name'>Email</FormLabel>
@@ -84,13 +120,28 @@ const LoginForm = () => {
 						</FormErrorMessage>
 					</FormControl>
 				</Grid>
-				<Flex w='100%' justifyContent={'flex-end'}>
-					<Button ml='auto' type='submit'>
-						Login
+				<Flex w='100%' mt='4' justifyContent={'flex-end'}>
+					<Button
+						loading={state.status === 'loading'}
+						colorScheme='telegram'
+						w='full'
+						type='submit'
+					>
+						Login with email
 					</Button>
 				</Flex>
-			</Grid>
-		</form>
+				<Text color='red.500'>{state.error}</Text>
+			</form>
+			<Button
+				colorScheme='red'
+				onClick={async (e) => {
+					await googleSignIn()
+					router.replace('/')
+				}}
+			>
+				Login with google
+			</Button>
+		</Grid>
 	)
 }
 

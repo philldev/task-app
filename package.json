@@ -14,6 +14,7 @@
     "@emotion/styled": "^11",
     "@heroicons/react": "^1.0.5",
     "@hookform/resolvers": "^2.8.5",
+    "firebase": "^9.6.1",
     "framer-motion": "^5",
     "next": "12.0.7",
     "react": "17.0.2",
