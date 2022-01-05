@@ -34,41 +34,102 @@ import {
 	useDisclosure,
 	VStack,
 } from '@chakra-ui/react'
-import { DotsHorizontalIcon } from '@heroicons/react/outline'
+import { DotsHorizontalIcon, LogoutIcon } from '@heroicons/react/outline'
+import Head from 'next/head'
 import { FC, useEffect, useRef, useState } from 'react'
 
 const Home = () => {
 	return (
-		<Flex flexDir='column' w='100vw' h='100vh' overflow='hidden'>
-			<Box
-				flexShrink='0'
-				h='16'
-				borderBottom='1px solid'
-				borderColor='gray.100'
-			>
-				<Flex
-					px='4'
-					w='full'
-					h='full'
-					alignItems='center'
-					justifyContent='space-between'
+		<>
+			<Head>
+				<title>Task App</title>
+			</Head>
+			<Flex flexDir='column' w='100vw' h='100vh' overflow='hidden'>
+				<Box
+					flexShrink='0'
+					h='16'
+					borderBottom='1px solid'
+					borderColor='gray.100'
 				>
-					<Text fontWeight='bold'>Task App</Text>
-					<Avatar size='sm' name='Deddy Wolley' />
+					<Flex
+						px='4'
+						w='full'
+						h='full'
+						alignItems='center'
+						justifyContent='space-between'
+					>
+						<Text fontWeight='bold'>Task App</Text>
+						<Flex
+							p='2'
+							rounded='md'
+							border='1px solid'
+							borderColor='gray.100'
+							display={{ base: 'none', md: 'flex' }}
+							alignItems='center'
+						>
+							<Text mr='2' fontSize='xs'>
+								Deddy Wolley
+							</Text>
+							<Avatar size='xs' name='Deddy Wolley' />
+							<Divider orientation='vertical' h='6' mx='4' />
+							<Button
+								variant='ghost'
+								leftIcon={<LogoutIcon width='14px' height='14px' />}
+								size='sm'
+							>
+								Logout
+							</Button>
+						</Flex>
+						<Menu>
+							<MenuButton
+								p='2'
+								rounded='md'
+								border='1px solid'
+								borderColor='gray.100'
+								display={{ base: 'flex', md: 'none' }}
+							>
+								<Flex alignItems='center'>
+									<Text
+										mr='2'
+										fontSize='xs'
+										visibility={{ base: 'hidden', md: 'visible' }}
+										display={{ base: 'none', md: 'block' }}
+									>
+										Deddy Wolley
+									</Text>
+									<Avatar size='xs' name='Deddy Wolley' />
+								</Flex>
+							</MenuButton>
+							<MenuList>
+								<Text
+									py='2'
+									px='4'
+									visibility={{ md: 'hidden', base: 'visible' }}
+									display={{ md: 'none', base: 'block' }}
+								>
+									Deddy Wolley
+								</Text>
+								<Divider />
+								<MenuItem icon={<LogoutIcon width='20px' height='20px' />}>
+									Logout
+								</MenuItem>
+							</MenuList>
+						</Menu>
+					</Flex>
+				</Box>
+				<Flex
+					flexDir={{ base: 'column', md: 'row' }}
+					fontSize='sm'
+					p='4'
+					flex='1'
+					gap='4'
+					overflowY={{ base: 'hidden', md: 'auto' }}
+				>
+					<TaskListBox />
+					<TasksBox />
 				</Flex>
-			</Box>
-			<Flex
-				flexDir={{ base: 'column', md: 'row' }}
-				fontSize='sm'
-				p='4'
-				flex='1'
-				gap='4'
-				overflowY={{ base: 'hidden', md: 'auto' }}
-			>
-				<TaskListBox />
-				<TasksBox />
 			</Flex>
-		</Flex>
+		</>
 	)
 }
 
