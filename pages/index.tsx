@@ -1,17 +1,40 @@
+import { DeleteIcon, EditIcon } from '@chakra-ui/icons'
 import {
+	AlertDialog,
+	AlertDialogBody,
+	AlertDialogContent,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogOverlay,
 	Avatar,
 	Box,
 	Button,
 	chakra,
 	Checkbox,
 	Divider,
+	Drawer,
+	DrawerBody,
+	DrawerContent,
+	DrawerHeader,
+	DrawerOverlay,
 	Flex,
+	FormControl,
+	FormErrorMessage,
+	FormLabel,
+	Grid,
 	HStack,
+	IconButton,
 	Input,
+	Menu,
+	MenuButton,
+	MenuItem,
+	MenuList,
 	StackDivider,
 	Text,
+	useDisclosure,
 	VStack,
 } from '@chakra-ui/react'
+import { DotsHorizontalIcon } from '@heroicons/react/outline'
 import { FC, useEffect, useRef, useState } from 'react'
 
 const Home = () => {
@@ -153,108 +176,298 @@ const TasksBox = () => {
 			inputRef.current.focus()
 		}
 	}, [isCreating])
+
+	const deleteAlert = useDisclosure()
+	const editDrawer = useDisclosure()
+	const cancelRef = useRef<HTMLButtonElement | null>(null)
+
 	return (
-		<AppBox
-			d='flex'
-			flexDir='column'
-			p='4'
-			flex={{ base: '1', md: '2' }}
-			h={{ base: 'calc(100% - 25vh - 16px)', md: 'full' }}
-		>
-			<Flex flexShrink='0' justifyContent='space-between'>
-				<Text fontWeight='bold'>Lorem, ipsum.</Text>
-				<HStack spacing='2'>
-					<Button
-						disabled={isCreating}
-						onClick={onNewTaskClick}
-						colorScheme='blue'
-						size='xs'
-						justifyContent='flex-start'
-					>
-						+ Task
-					</Button>
-					<Button variant='outline' size='xs' justifyContent='flex-start'>
-						Delete
-					</Button>
-					<Button variant='outline' size='xs' justifyContent='flex-start'>
-						Edit Label
-					</Button>
-				</HStack>
-			</Flex>
-			<Divider mt='2' mb='4' />
-			<VStack
-				flex='1'
-				divider={<StackDivider borderColor='gray.50' />}
-				spacing='0'
-				alignItems='stretch'
-				overflowY='auto'
+		<>
+			<Drawer
+				placement={'bottom'}
+				onClose={editDrawer.onClose}
+				isOpen={editDrawer.isOpen}
 			>
-				{isCreating && (
-					<Flex
-						as='form'
-						onSubmit={(e) => {
-							e.preventDefault()
-							onCreateTask()
-						}}
-						rounded='md'
-						pos='relative'
-						alignItems='center'
-					>
-						<Checkbox
-							colorScheme='blackAlpha'
-							mr='4'
-							pos='absolute'
-							left='2'
-							zIndex={10}
-						/>
-						<Input
-							onBlur={() => {
-								setIsCreating(false)
+				<DrawerOverlay />
+				<DrawerContent>
+					<DrawerHeader borderBottomWidth='1px'>Edit Task</DrawerHeader>
+					<DrawerBody pb='8'>
+						<form
+							onSubmit={(e) => {
+								e.preventDefault()
 							}}
-							ref={inputRef}
-							bg='transparent'
-							border='transparent'
-							fontSize='xs'
-							pl='8'
-							_focus={{ borderColor: 'gray.300' }}
-						/>
-					</Flex>
-				)}
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-				<TaskItem label='Todo for today' />
-			</VStack>
-		</AppBox>
+						>
+							<Grid gap='4'>
+								<FormControl>
+									<FormLabel htmlFor='name'>Task Label</FormLabel>
+									<Input
+										id='email'
+										type='email'
+										defaultValue={'Lorem ipsum dolor'}
+									/>
+									<FormErrorMessage></FormErrorMessage>
+								</FormControl>
+								<HStack spacing='4' justifyContent='flex-end'>
+									<Button size='sm'>Edit</Button>
+									<Button size='sm' onClick={editDrawer.onClose}>
+										Cancel
+									</Button>
+								</HStack>
+							</Grid>
+						</form>
+					</DrawerBody>
+				</DrawerContent>
+			</Drawer>
+			<AlertDialog
+				size='xs'
+				isCentered
+				isOpen={deleteAlert.isOpen}
+				leastDestructiveRef={cancelRef}
+				onClose={deleteAlert.onClose}
+			>
+				<AlertDialogOverlay>
+					<AlertDialogContent>
+						<AlertDialogHeader fontSize='lg' fontWeight='bold'>
+							Delete List?
+						</AlertDialogHeader>
+
+						<AlertDialogBody>
+							Are you sure? You can{`'`}t undo this action afterwards.
+						</AlertDialogBody>
+
+						<AlertDialogFooter>
+							<Button ref={cancelRef} onClick={deleteAlert.onClose}>
+								Cancel
+							</Button>
+							<Button colorScheme='red' onClick={deleteAlert.onClose} ml={3}>
+								Delete
+							</Button>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialogOverlay>
+			</AlertDialog>
+			<AppBox
+				d='flex'
+				flexDir='column'
+				p='4'
+				flex={{ base: '1', md: '2' }}
+				h={{ base: 'calc(100% - 25vh - 16px)', md: 'full' }}
+			>
+				<Flex flexShrink='0' justifyContent='space-between'>
+					<Text fontWeight='bold'>Lorem, ipsum.</Text>
+					<HStack spacing='2'>
+						<Button
+							disabled={isCreating}
+							onClick={onNewTaskClick}
+							colorScheme='blue'
+							size='xs'
+							justifyContent='flex-start'
+						>
+							+ Task
+						</Button>
+						<Button
+							d={{ base: 'none', md: 'flex' }}
+							variant='outline'
+							size='xs'
+							justifyContent='flex-start'
+							onClick={deleteAlert.onOpen}
+						>
+							Delete
+						</Button>
+						<Button
+							onClick={editDrawer.onOpen}
+							d={{ base: 'none', md: 'flex' }}
+							variant='outline'
+							size='xs'
+							justifyContent='flex-start'
+						>
+							Edit Label
+						</Button>
+						<Menu>
+							<MenuButton
+								as={IconButton}
+								aria-label='Options'
+								icon={<DotsHorizontalIcon width={14} height={14} />}
+								variant='outline'
+								size='xs'
+							/>
+							<MenuList>
+								<MenuItem onClick={deleteAlert.onOpen} icon={<DeleteIcon />}>
+									Delete List
+								</MenuItem>
+								<MenuItem onClick={editDrawer.onOpen} icon={<EditIcon />}>
+									Edit Label
+								</MenuItem>
+							</MenuList>
+						</Menu>
+					</HStack>
+				</Flex>
+				<Divider mt='2' mb='4' />
+				<VStack
+					flex='1'
+					divider={<StackDivider borderColor='gray.50' />}
+					spacing='0'
+					alignItems='stretch'
+					overflowY='auto'
+					overflowX='hidden'
+				>
+					{isCreating && (
+						<Flex
+							as='form'
+							onSubmit={(e) => {
+								e.preventDefault()
+								onCreateTask()
+							}}
+							rounded='md'
+							pos='relative'
+							alignItems='center'
+						>
+							<Checkbox
+								colorScheme='blackAlpha'
+								mr='4'
+								pos='absolute'
+								left='2'
+								zIndex={10}
+							/>
+							<Input
+								onBlur={() => {
+									setIsCreating(false)
+								}}
+								ref={inputRef}
+								bg='transparent'
+								border='transparent'
+								fontSize='xs'
+								pl='8'
+								_focus={{ borderColor: 'gray.300' }}
+							/>
+						</Flex>
+					)}
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+					<TaskItem label='Todo for today' />
+				</VStack>
+			</AppBox>
+		</>
 	)
 }
 
 const TaskItem = (props: { label: string; completed?: boolean }) => {
+	const editDrawer = useDisclosure()
+	const deleteAlert = useDisclosure()
+	const cancelRef = useRef<HTMLButtonElement | null>(null)
+
 	return (
-		<Flex rounded='md' pos='relative' alignItems='center'>
-			<Checkbox
-				colorScheme='blackAlpha'
-				mr='4'
-				pos='absolute'
-				left='2'
-				zIndex={10}
-			/>
-			<Input
-				defaultValue={props.label}
-				bg='transparent'
-				border='transparent'
-				fontSize='xs'
-				pl='8'
-				_focus={{ borderColor: 'gray.300' }}
-			/>
-		</Flex>
+		<>
+			<Drawer
+				placement={'bottom'}
+				onClose={editDrawer.onClose}
+				isOpen={editDrawer.isOpen}
+			>
+				<DrawerOverlay />
+				<DrawerContent>
+					<DrawerHeader borderBottomWidth='1px'>Edit Task</DrawerHeader>
+					<DrawerBody pb='8'>
+						<form
+							onSubmit={(e) => {
+								e.preventDefault()
+							}}
+						>
+							<Grid gap='4'>
+								<FormControl>
+									<FormLabel htmlFor='name'>Task Label</FormLabel>
+									<Input id='email' type='email' defaultValue={props.label} />
+									<FormErrorMessage></FormErrorMessage>
+								</FormControl>
+								<HStack spacing='4' justifyContent='flex-end'>
+									<Button size='sm'>Edit</Button>
+									<Button size='sm' onClick={editDrawer.onClose}>
+										Cancel
+									</Button>
+								</HStack>
+							</Grid>
+						</form>
+					</DrawerBody>
+				</DrawerContent>
+			</Drawer>
+			<AlertDialog
+				size='xs'
+				isCentered
+				isOpen={deleteAlert.isOpen}
+				leastDestructiveRef={cancelRef}
+				onClose={deleteAlert.onClose}
+			>
+				<AlertDialogOverlay>
+					<AlertDialogContent>
+						<AlertDialogHeader fontSize='lg' fontWeight='bold'>
+							Delete Task?
+						</AlertDialogHeader>
+
+						<AlertDialogBody>
+							Are you sure? You can{`'`}t undo this action afterwards.
+						</AlertDialogBody>
+
+						<AlertDialogFooter>
+							<Button ref={cancelRef} onClick={deleteAlert.onClose}>
+								Cancel
+							</Button>
+							<Button colorScheme='red' onClick={deleteAlert.onClose} ml={3}>
+								Delete
+							</Button>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialogOverlay>
+			</AlertDialog>
+			<Flex
+				rounded='md'
+				pos='relative'
+				alignItems='center'
+				role='group'
+				_hover={{ bg: 'gray.50' }}
+			>
+				<Checkbox
+					colorScheme='blackAlpha'
+					mr='4'
+					pos='absolute'
+					left='2'
+					zIndex={10}
+				/>
+				<Text fontSize='xs' pl='8' py='2'>
+					{props.label}
+				</Text>
+				<HStack
+					spacing='2'
+					pos='absolute'
+					right='0'
+					visibility='hidden'
+					opacity={0}
+					transition='ease-in-out .2s all'
+					_groupHover={{ opacity: 1, visibility: 'visible' }}
+				>
+					<IconButton
+						variant='ghost'
+						size='xs'
+						aria-label='delete'
+						icon={<DeleteIcon />}
+						onClick={deleteAlert.onOpen}
+					/>
+					<IconButton
+						onClick={editDrawer.onOpen}
+						size='xs'
+						variant='ghost'
+						aria-label='delete'
+						icon={<EditIcon />}
+					/>
+				</HStack>
+			</Flex>
+		</>
 	)
 }
 

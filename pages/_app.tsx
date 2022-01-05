@@ -1,7 +1,9 @@
 import { ChakraProvider, extendTheme } from '@chakra-ui/react'
 import type { AppProps } from 'next/app'
 
-const theme = extendTheme({})
+const theme = extendTheme({
+	shadows: { outline: 'none' },
+})
 
 function MyApp({ Component, pageProps }: AppProps) {
 	return (
