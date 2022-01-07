@@ -31,10 +31,16 @@ import {
 	MenuList,
 	StackDivider,
 	Text,
+	useColorMode,
 	useDisclosure,
 	VStack,
 } from '@chakra-ui/react'
-import { DotsHorizontalIcon, LogoutIcon } from '@heroicons/react/outline'
+import {
+	DotsHorizontalIcon,
+	LogoutIcon,
+	MoonIcon,
+	SunIcon,
+} from '@heroicons/react/outline'
 import { Spinner } from 'components/spinner'
 import { useAuth } from 'context/auth.context'
 import { createList } from 'db/tasks/create-list'
@@ -69,9 +75,10 @@ const Home = () => {
 	const { state } = useAuth()
 	const loading = state.status === 'Loading'
 	const router = useRouter()
-
+	const { colorMode, toggleColorMode } = useColorMode()
 	useEffect(() => {
 		if (state.status === 'NotLoggedIn') router.push('/login')
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.status])
 
 	return (
@@ -90,7 +97,7 @@ const Home = () => {
 						flexShrink='0'
 						h='16'
 						borderBottom='1px solid'
-						borderColor='gray.100'
+						borderColor={colorMode === 'dark' ? 'gray.900' : 'gray.100'}
 					>
 						<Flex
 							px='4'
@@ -100,7 +107,10 @@ const Home = () => {
 							justifyContent='space-between'
 						>
 							<Text fontWeight='bold'>Task App</Text>
-							<UserBox />
+							<HStack spacing='4'>
+								<ColorModeToggler />
+								<UserBox />
+							</HStack>
 						</Flex>
 					</Box>
 					<Flex
@@ -119,6 +129,23 @@ const Home = () => {
 				</Flex>
 			)}
 		</>
+	)
+}
+
+const ColorModeToggler = () => {
+	const { colorMode, toggleColorMode } = useColorMode()
+	return (
+		<IconButton
+			icon={
+				colorMode === 'dark' ? (
+					<MoonIcon width='20px' height='20px' />
+				) : (
+					<SunIcon width='20px' height='20px' />
+				)
+			}
+			onClick={toggleColorMode}
+			aria-label='toggle color mode'
+		/>
 	)
 }
 
@@ -156,11 +183,12 @@ const useTaskTab = () => {
 }
 
 const AppBox = chakra((props) => {
+	const { colorMode, toggleColorMode } = useColorMode()
 	return (
 		<Box
 			rounded='md'
 			border='1px solid'
-			borderColor='gray.100'
+			borderColor={colorMode === 'dark' ? 'gray.900' : 'gray.100'}
 			shadow='sm'
 			{...props}
 		></Box>
@@ -181,6 +209,7 @@ const UserBox = () => {
 			idField: 'id',
 		}
 	)
+	const { colorMode, toggleColorMode } = useColorMode()
 
 	return (
 		<>
@@ -188,7 +217,7 @@ const UserBox = () => {
 				p='2'
 				rounded='md'
 				border='1px solid'
-				borderColor='gray.100'
+				borderColor={colorMode === 'dark' ? 'gray.900' : 'gray.100'}
 				display={{ base: 'none', md: 'flex' }}
 				alignItems='center'
 			>
@@ -211,7 +240,7 @@ const UserBox = () => {
 					p='2'
 					rounded='md'
 					border='1px solid'
-					borderColor='gray.100'
+					borderColor={colorMode === 'dark' ? 'gray.900' : 'gray.100'}
 					display={{ base: 'flex', md: 'none' }}
 				>
 					<Flex alignItems='center'>
@@ -269,7 +298,7 @@ const TaskListBox = () => {
 		}
 	}, [isCreating])
 
-	const { selectList, lists } = useTaskTab()
+	const { selectList, lists, selectedList } = useTaskTab()
 
 	return (
 		<AppBox
@@ -319,7 +348,11 @@ const TaskListBox = () => {
 					</form>
 				)}
 				{lists?.map((list) => (
-					<TaskListItem onClick={() => selectList(list)} key={list.id}>
+					<TaskListItem
+						active={selectedList?.id === list.id}
+						onClick={() => selectList(list)}
+						key={list.id}
+					>
 						{list.title}
 					</TaskListItem>
 				))}
@@ -390,6 +423,7 @@ const EditListForm = (props: { list: List; onClose: () => void }) => {
 }
 
 const TasksBox = () => {
+	const { colorMode, toggleColorMode } = useColorMode()
 	const [isCreating, setIsCreating] = useState(false)
 	const inputRef = useRef<HTMLInputElement | null>(null)
 	const onNewTaskClick = () => {
@@ -538,7 +572,11 @@ const TasksBox = () => {
 				<Divider mt='2' mb='4' />
 				<VStack
 					flex='1'
-					divider={<StackDivider borderColor='gray.50' />}
+					divider={
+						<StackDivider
+							borderColor={colorMode === 'dark' ? 'gray.900' : 'gray.100'}
+						/>
+					}
 					spacing='0'
 					alignItems='stretch'
 					overflowY='auto'
@@ -573,7 +611,9 @@ const TasksBox = () => {
 								pl='8'
 								py={0}
 								h='34px'
-								_focus={{ borderColor: 'gray.300' }}
+								_focus={{
+									borderColor: colorMode === 'dark' ? 'gray.900' : 'gray.100',
+								}}
 							/>
 						</Flex>
 					)}
@@ -685,7 +725,7 @@ const TaskItem = (props: { task: Task }) => {
 	const auth = useAuth()
 	const { selectedList } = useTaskTab()
 	const editDrawer = useDisclosure()
-
+	const { colorMode, toggleColorMode } = useColorMode()
 	const deleteAlert = useDisclosure()
 	const cancelRef = useRef<HTMLButtonElement | null>(null)
 	const onDelete = async () => {
@@ -739,7 +779,7 @@ const TaskItem = (props: { task: Task }) => {
 				pos='relative'
 				alignItems='center'
 				role='group'
-				_hover={{ bg: 'gray.50' }}
+				_hover={{ bg: colorMode === 'dark' ? 'gray.800' : 'gray.50' }}
 			>
 				<Checkbox
 					colorScheme='blackAlpha'
@@ -795,15 +835,23 @@ const TaskItem = (props: { task: Task }) => {
 const TaskListItem: FC<{ active?: boolean; onClick?: () => void }> = (
 	props
 ) => {
+	const { colorMode, toggleColorMode } = useColorMode()
 	return (
 		<Box
 			onClick={props.onClick}
 			cursor='pointer'
 			rounded='md'
 			p='2'
-			bg={props.active ? 'black' : 'gray.50'}
+			bg={
+				props.active
+					? colorMode === 'dark'
+						? 'gray.800'
+						: 'black'
+					: colorMode === 'dark'
+					? 'black'
+					: 'gray.50'
+			}
 			color={props.active ? 'white' : undefined}
-			_hover={{ bg: props.active ? undefined : 'gray.100' }}
 		>
 			{props.children}
 		</Box>
