@@ -37,14 +37,31 @@ import {
 import { DotsHorizontalIcon, LogoutIcon } from '@heroicons/react/outline'
 import { Spinner } from 'components/spinner'
 import { useAuth } from 'context/auth.context'
+import { createList } from 'db/tasks/create-list'
+import { createTask } from 'db/tasks/create-task'
+import { deleteList } from 'db/tasks/delete-list'
+import { List, Task } from 'db/tasks/task'
+import { updateList } from 'db/tasks/update-list'
 import { AppUser } from 'db/users/users'
 import { db } from 'firebase.config'
-import { doc } from 'firebase/firestore'
+import { collection, doc, limit, query } from 'firebase/firestore'
 import { useSignOut } from 'hooks/auth/signout'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { FC, useEffect, useRef, useState } from 'react'
-import { useDocumentData } from 'react-firebase-hooks/firestore'
+import {
+	createContext,
+	FC,
+	useContext,
+	useEffect,
+	useRef,
+	useState,
+} from 'react'
+import {
+	useCollectionData,
+	useDocumentData,
+} from 'react-firebase-hooks/firestore'
+import { Data } from 'react-firebase-hooks/firestore/dist/firestore/types'
+import { useForm } from 'react-hook-form'
 
 const Home = () => {
 	const { state } = useAuth()
@@ -60,11 +77,12 @@ const Home = () => {
 			<Head>
 				<title>Task App</title>
 			</Head>
-			{loading ? (
+			{loading && (
 				<Grid placeItems='center' h='100vh'>
 					<Spinner w='32px' color='red' h='32px' />
 				</Grid>
-			) : (
+			)}
+			{state.status === 'LoggedIn' && (
 				<Flex flexDir='column' w='100vw' h='100vh' overflow='hidden'>
 					<Box
 						flexShrink='0'
@@ -91,13 +109,48 @@ const Home = () => {
 						gap='4'
 						overflowY={{ base: 'hidden', md: 'auto' }}
 					>
-						<TaskListBox />
-						<TasksBox />
+						<TaskTabProvider>
+							<TaskListBox />
+							<TasksBox />
+						</TaskTabProvider>
 					</Flex>
 				</Flex>
 			)}
 		</>
 	)
+}
+
+interface TaskTab {
+	lists: Data<List, '', ''>[] | undefined
+	selectedList: Data<List, '', ''> | undefined
+	selectList: (list: List | null) => void
+}
+
+const TaskTabCtx = createContext<TaskTab | null>(null)
+
+const TaskTabProvider: FC = (props) => {
+	const auth = useAuth()
+	const [lists, loadingLists, errorLists] = useCollectionData<List>(
+		query(collection(db, 'users', auth.state.user?.uid!, 'lists'), limit(99)),
+		{
+			idField: 'id',
+		}
+	)
+	const [selectedId, setSelectedId] = useState<string | null>(null)
+	const selectedList = lists?.find((list) => selectedId === list.id)
+	const selectList: TaskTab['selectList'] = (list) =>
+		setSelectedId(list ? list.id : null)
+	return (
+		<TaskTabCtx.Provider value={{ selectedList, selectList, lists }}>
+			{props.children}
+		</TaskTabCtx.Provider>
+	)
+}
+
+const useTaskTab = () => {
+	const ctx = useContext(TaskTabCtx)
+	if (!ctx) throw new Error('no ctx provided')
+	return ctx
 }
 
 const AppBox = chakra((props) => {
@@ -199,10 +252,13 @@ const TaskListBox = () => {
 	const onNewListClick = () => {
 		setIsCreating(true)
 	}
-	const onCreateList = () => {
+	const auth = useAuth()
+	const onCreateList = async () => {
 		const value = inputRef.current?.value
-		setIsCreating(false)
-		console.log(value)
+		if (value && value.length > 0) {
+			createList(auth.state.user?.uid!, { title: value })
+			setIsCreating(false)
+		}
 	}
 
 	useEffect(() => {
@@ -210,6 +266,8 @@ const TaskListBox = () => {
 			inputRef.current.focus()
 		}
 	}, [isCreating])
+
+	const { selectList, lists } = useTaskTab()
 
 	return (
 		<AppBox
@@ -258,13 +316,74 @@ const TaskListBox = () => {
 						/>
 					</form>
 				)}
-				<TaskListItem active>Lorem, ipsum.</TaskListItem>
-				<TaskListItem>Lorem, ipsum.</TaskListItem>
-				<TaskListItem>Lorem, ipsum.</TaskListItem>
-				<TaskListItem>Lorem, ipsum.</TaskListItem>
-				<TaskListItem>Lorem, ipsum.</TaskListItem>
+				{lists?.map((list) => (
+					<TaskListItem onClick={() => selectList(list)} key={list.id}>
+						{list.title}
+					</TaskListItem>
+				))}
 			</VStack>
 		</AppBox>
+	)
+}
+
+const EditListForm = (props: { list: List; onClose: () => void }) => {
+	type Schema = {
+		title: string
+	}
+
+	const {
+		handleSubmit,
+		register,
+		formState: { errors },
+	} = useForm<Schema>({
+		defaultValues: { title: props.list.title },
+	})
+
+	const [state, setState] = useState<
+		| {
+				status: 'loading'
+				error: null
+		  }
+		| {
+				status: 'error'
+				error: string
+		  }
+		| { status: 'idle'; error: null }
+		| { status: 'success'; error: null }
+	>({ status: 'idle', error: null })
+
+	const auth = useAuth()
+
+	const onSubmit = async (data: Schema) => {
+		try {
+			setState({ status: 'loading', error: null })
+			await updateList(auth.state.user?.uid!, props.list.id, data)
+			props.onClose()
+		} catch (error) {
+			setState({ status: 'error', error: 'something went wrong' })
+		}
+	}
+
+	return (
+		<form onSubmit={handleSubmit(onSubmit)}>
+			<Grid gap='4'>
+				<FormControl>
+					<FormLabel htmlFor='name'>Task Label</FormLabel>
+					<Input
+						{...register('title', {
+							required: { message: 'Title is required', value: true },
+						})}
+					/>
+					<FormErrorMessage>{errors.title?.message}</FormErrorMessage>
+				</FormControl>
+				<HStack spacing='4' justifyContent='flex-end'>
+					<Button size='sm'>Edit</Button>
+					<Button size='sm' type='button' onClick={props.onClose}>
+						Cancel
+					</Button>
+				</HStack>
+			</Grid>
+		</form>
 	)
 }
 
@@ -274,10 +393,14 @@ const TasksBox = () => {
 	const onNewTaskClick = () => {
 		setIsCreating(true)
 	}
+	const auth = useAuth()
+	const { selectedList, selectList } = useTaskTab()
 	const onCreateTask = () => {
 		const value = inputRef.current?.value
-		setIsCreating(false)
-		console.log(value)
+		if (value && value.length > 0) {
+			createTask(auth.state.user?.uid!, selectedList?.id!, { text: value })
+			setIsCreating(false)
+		}
 	}
 
 	useEffect(() => {
@@ -290,6 +413,27 @@ const TasksBox = () => {
 	const editDrawer = useDisclosure()
 	const cancelRef = useRef<HTMLButtonElement | null>(null)
 
+	const onDeleteList = async () => {
+		try {
+			await deleteList(auth.state.user?.uid!, selectedList?.id!)
+			selectList(null)
+			deleteAlert.onClose()
+		} catch (error) {}
+	}
+
+	if (!selectedList)
+		return (
+			<AppBox
+				d='flex'
+				flexDir='column'
+				p='4'
+				flex={{ base: '1', md: '2' }}
+				h={{ base: 'calc(100% - 25vh - 16px)', md: 'full' }}
+			>
+				<Text>Please select a list!</Text>
+			</AppBox>
+		)
+
 	return (
 		<>
 			<Drawer
@@ -301,29 +445,7 @@ const TasksBox = () => {
 				<DrawerContent>
 					<DrawerHeader borderBottomWidth='1px'>Edit Task</DrawerHeader>
 					<DrawerBody pb='8'>
-						<form
-							onSubmit={(e) => {
-								e.preventDefault()
-							}}
-						>
-							<Grid gap='4'>
-								<FormControl>
-									<FormLabel htmlFor='name'>Task Label</FormLabel>
-									<Input
-										id='email'
-										type='email'
-										defaultValue={'Lorem ipsum dolor'}
-									/>
-									<FormErrorMessage></FormErrorMessage>
-								</FormControl>
-								<HStack spacing='4' justifyContent='flex-end'>
-									<Button size='sm'>Edit</Button>
-									<Button size='sm' onClick={editDrawer.onClose}>
-										Cancel
-									</Button>
-								</HStack>
-							</Grid>
-						</form>
+						<EditListForm onClose={editDrawer.onClose} list={selectedList} />
 					</DrawerBody>
 				</DrawerContent>
 			</Drawer>
@@ -348,7 +470,7 @@ const TasksBox = () => {
 							<Button ref={cancelRef} onClick={deleteAlert.onClose}>
 								Cancel
 							</Button>
-							<Button colorScheme='red' onClick={deleteAlert.onClose} ml={3}>
+							<Button colorScheme='red' onClick={onDeleteList} ml={3}>
 								Delete
 							</Button>
 						</AlertDialogFooter>
@@ -363,7 +485,7 @@ const TasksBox = () => {
 				h={{ base: 'calc(100% - 25vh - 16px)', md: 'full' }}
 			>
 				<Flex flexShrink='0' justifyContent='space-between'>
-					<Text fontWeight='bold'>Lorem, ipsum.</Text>
+					<Text fontWeight='bold'>{selectedList.title}</Text>
 					<HStack spacing='2'>
 						<Button
 							disabled={isCreating}
@@ -447,23 +569,42 @@ const TasksBox = () => {
 								border='transparent'
 								fontSize='xs'
 								pl='8'
+								py={0}
+								h='34px'
 								_focus={{ borderColor: 'gray.300' }}
 							/>
 						</Flex>
 					)}
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
-					<TaskItem label='Todo for today' />
+					<TaskItems list={selectedList} />
 				</VStack>
 			</AppBox>
+		</>
+	)
+}
+
+const TaskItems = (props: { list: List }) => {
+	const auth = useAuth()
+	const [tasks, loadingTasks, errorTasks] = useCollectionData<Task>(
+		query(
+			collection(
+				db,
+				'users',
+				auth.state.user?.uid!,
+				'lists',
+				props.list.id,
+				'tasks'
+			),
+			limit(99)
+		),
+		{
+			idField: 'id',
+		}
+	)
+	return (
+		<>
+			{tasks?.map((task) => (
+				<TaskItem label={task.text} key={task.id} />
+			))}
 		</>
 	)
 }
@@ -472,7 +613,6 @@ const TaskItem = (props: { label: string; completed?: boolean }) => {
 	const editDrawer = useDisclosure()
 	const deleteAlert = useDisclosure()
 	const cancelRef = useRef<HTMLButtonElement | null>(null)
-
 	return (
 		<>
 			<Drawer
@@ -580,9 +720,12 @@ const TaskItem = (props: { label: string; completed?: boolean }) => {
 	)
 }
 
-const TaskListItem: FC<{ active?: boolean }> = (props) => {
+const TaskListItem: FC<{ active?: boolean; onClick?: () => void }> = (
+	props
+) => {
 	return (
 		<Box
+			onClick={props.onClick}
 			cursor='pointer'
 			rounded='md'
 			p='2'
