@@ -65,7 +65,9 @@ import {
 	useState,
 } from 'react'
 import {
+	useCollection,
 	useCollectionData,
+	useDocument,
 	useDocumentData,
 } from 'react-firebase-hooks/firestore'
 import { Data } from 'react-firebase-hooks/firestore/dist/firestore/types'
@@ -150,8 +152,8 @@ const ColorModeToggler = () => {
 }
 
 interface TaskTab {
-	lists: Data<List, '', ''>[] | undefined
-	selectedList: Data<List, '', ''> | undefined
+	lists: List[]
+	selectedList: List | undefined
 	selectList: (list: List | null) => void
 }
 
@@ -159,12 +161,16 @@ const TaskTabCtx = createContext<TaskTab | null>(null)
 
 const TaskTabProvider: FC = (props) => {
 	const auth = useAuth()
-	const [lists, loadingLists, errorLists] = useCollectionData<List>(
-		query(collection(db, 'users', auth.state.user?.uid!, 'lists'), limit(99)),
-		{
-			idField: 'id',
-		}
+	const lists: List[] = []
+	const [values, loadingLists, errorLists] = useCollection(
+		query(collection(db, 'users', auth.state.user?.uid!, 'lists'), limit(99))
 	)
+	values?.forEach((doc) => {
+		lists.push({
+			id: doc.id,
+			...(doc.data() as Omit<List, 'id'>),
+		})
+	})
 	const [selectedId, setSelectedId] = useState<string | null>(null)
 	const selectedList = lists?.find((list) => selectedId === list.id)
 	const selectList: TaskTab['selectList'] = (list) =>
@@ -203,12 +209,12 @@ const UserBox = () => {
 		signout()
 	}
 
-	const [value, loading, error] = useDocumentData<AppUser>(
-		auth.state.user && doc(db, 'users', auth.state.user?.uid!),
-		{
-			idField: 'id',
-		}
+	const [value, loading, error] = useDocument(
+		auth.state.user && doc(db, 'users', auth.state.user?.uid!)
 	)
+
+	const user = value ? (value.data() as AppUser) : undefined
+
 	const { colorMode, toggleColorMode } = useColorMode()
 
 	return (
@@ -222,9 +228,9 @@ const UserBox = () => {
 				alignItems='center'
 			>
 				<Text mr='2' fontSize='xs'>
-					{value?.username}
+					{user?.username}
 				</Text>
-				<Avatar size='xs' src={value?.photoURL} name={value?.username} />
+				<Avatar size='xs' src={user?.photoURL} name={user?.username} />
 				<Divider orientation='vertical' h='6' mx='4' />
 				<Button
 					variant='ghost'
@@ -250,9 +256,9 @@ const UserBox = () => {
 							visibility={{ base: 'hidden', md: 'visible' }}
 							display={{ base: 'none', md: 'block' }}
 						>
-							{value?.username}
+							{user?.username}
 						</Text>
-						<Avatar size='xs' name={value?.username} src={value?.photoURL} />
+						<Avatar size='xs' name={user?.username} src={user?.photoURL} />
 					</Flex>
 				</MenuButton>
 				<MenuList>
@@ -262,7 +268,7 @@ const UserBox = () => {
 						visibility={{ md: 'hidden', base: 'visible' }}
 						display={{ md: 'none', base: 'block' }}
 					>
-						{value?.username}
+						{user?.username}
 					</Text>
 					<Divider />
 					<MenuItem
@@ -626,7 +632,7 @@ const TasksBox = () => {
 
 const TaskItems = (props: { list: List }) => {
 	const auth = useAuth()
-	const [tasks, loadingTasks, errorTasks] = useCollectionData<Task>(
+	const [values, loadingTasks, errorTasks] = useCollection(
 		query(
 			collection(
 				db,
@@ -637,14 +643,23 @@ const TaskItems = (props: { list: List }) => {
 				'tasks'
 			),
 			limit(99)
-		),
-		{
-			idField: 'id',
-		}
+		)
 	)
+
+	if (!values) return null
+
+	let tasks: Task[] = []
+
+	values.forEach((doc) => {
+		tasks.push({
+			id: doc.id,
+			...(doc.data() as Omit<Task, 'id'>),
+		})
+	})
+
 	return (
 		<>
-			{tasks?.map((task) => (
+			{tasks.map((task) => (
 				<TaskItem task={task} key={task.id} />
 			))}
 		</>

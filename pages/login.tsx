@@ -13,6 +13,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { FirebaseError } from 'firebase/app'
 import { useSignIn } from 'hooks/auth/signin'
 import { useSignInWithProvider } from 'hooks/auth/signin-with-provider'
+import Head from 'next/head'
 import NextLink from 'next/link'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
@@ -24,6 +25,9 @@ import { AuthLayout } from '../components/auth-layout'
 const Login = () => {
 	return (
 		<AuthLayout title='Login'>
+			<Head>
+				<title>Login</title>
+			</Head>
 			<LoginForm />
 			<Text>
 				Dont have account?{' '}

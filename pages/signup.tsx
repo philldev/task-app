@@ -12,6 +12,7 @@ import {
 import { yupResolver } from '@hookform/resolvers/yup'
 import { FirebaseError } from 'firebase/app'
 import { useSignup } from 'hooks/auth/signup'
+import Head from 'next/head'
 import NextLink from 'next/link'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
@@ -23,6 +24,9 @@ import { AuthLayout } from '../components/auth-layout'
 const Signup = () => {
 	return (
 		<AuthLayout title='Create Account'>
+			<Head>
+				<title>Signup</title>
+			</Head>
 			<SignupForm />
 			<Text fontSize='sm'>
 				Already have account?{' '}
