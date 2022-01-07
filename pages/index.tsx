@@ -40,8 +40,10 @@ import { useAuth } from 'context/auth.context'
 import { createList } from 'db/tasks/create-list'
 import { createTask } from 'db/tasks/create-task'
 import { deleteList } from 'db/tasks/delete-list'
+import { deleteTask } from 'db/tasks/delete-task'
 import { List, Task } from 'db/tasks/task'
 import { updateList } from 'db/tasks/update-list'
+import { updateTask } from 'db/tasks/update-task'
 import { AppUser } from 'db/users/users'
 import { db } from 'firebase.config'
 import { collection, doc, limit, query } from 'firebase/firestore'
@@ -603,16 +605,92 @@ const TaskItems = (props: { list: List }) => {
 	return (
 		<>
 			{tasks?.map((task) => (
-				<TaskItem label={task.text} key={task.id} />
+				<TaskItem task={task} key={task.id} />
 			))}
 		</>
 	)
 }
 
-const TaskItem = (props: { label: string; completed?: boolean }) => {
+const EditTaskForm = (props: { task: Task; onClose: () => void }) => {
+	type Schema = {
+		text: string
+	}
+
+	const {
+		handleSubmit,
+		register,
+		formState: { errors },
+	} = useForm<Schema>({
+		defaultValues: { text: props.task.text },
+	})
+
+	const [state, setState] = useState<
+		| {
+				status: 'loading'
+				error: null
+		  }
+		| {
+				status: 'error'
+				error: string
+		  }
+		| { status: 'idle'; error: null }
+		| { status: 'success'; error: null }
+	>({ status: 'idle', error: null })
+
+	const auth = useAuth()
+
+	const { selectedList } = useTaskTab()
+
+	const onSubmit = async (data: Schema) => {
+		try {
+			setState({ status: 'loading', error: null })
+			await updateTask(
+				auth.state.user?.uid!,
+				selectedList!.id,
+				props.task.id,
+				data
+			)
+			props.onClose()
+		} catch (error) {
+			setState({ status: 'error', error: 'something went wrong' })
+		}
+	}
+
+	return (
+		<form onSubmit={handleSubmit(onSubmit)}>
+			<Grid gap='4'>
+				<FormControl>
+					<FormLabel htmlFor='name'>Task Label</FormLabel>
+					<Input
+						{...register('text', {
+							required: { message: 'Label is required', value: true },
+						})}
+					/>
+					<FormErrorMessage>{errors.text?.message}</FormErrorMessage>
+				</FormControl>
+				<HStack spacing='4' justifyContent='flex-end'>
+					<Button type='submit' size='sm'>
+						Edit
+					</Button>
+					<Button size='sm' type='button' onClick={props.onClose}>
+						Cancel
+					</Button>
+				</HStack>
+			</Grid>
+		</form>
+	)
+}
+
+const TaskItem = (props: { task: Task }) => {
+	const auth = useAuth()
+	const { selectedList } = useTaskTab()
 	const editDrawer = useDisclosure()
+
 	const deleteAlert = useDisclosure()
 	const cancelRef = useRef<HTMLButtonElement | null>(null)
+	const onDelete = async () => {
+		await deleteTask(auth.state.user?.uid!, selectedList!.id, props.task.id)
+	}
 	return (
 		<>
 			<Drawer
@@ -624,25 +702,7 @@ const TaskItem = (props: { label: string; completed?: boolean }) => {
 				<DrawerContent>
 					<DrawerHeader borderBottomWidth='1px'>Edit Task</DrawerHeader>
 					<DrawerBody pb='8'>
-						<form
-							onSubmit={(e) => {
-								e.preventDefault()
-							}}
-						>
-							<Grid gap='4'>
-								<FormControl>
-									<FormLabel htmlFor='name'>Task Label</FormLabel>
-									<Input id='email' type='email' defaultValue={props.label} />
-									<FormErrorMessage></FormErrorMessage>
-								</FormControl>
-								<HStack spacing='4' justifyContent='flex-end'>
-									<Button size='sm'>Edit</Button>
-									<Button size='sm' onClick={editDrawer.onClose}>
-										Cancel
-									</Button>
-								</HStack>
-							</Grid>
-						</form>
+						<EditTaskForm task={props.task} onClose={editDrawer.onClose} />
 					</DrawerBody>
 				</DrawerContent>
 			</Drawer>
@@ -667,7 +727,7 @@ const TaskItem = (props: { label: string; completed?: boolean }) => {
 							<Button ref={cancelRef} onClick={deleteAlert.onClose}>
 								Cancel
 							</Button>
-							<Button colorScheme='red' onClick={deleteAlert.onClose} ml={3}>
+							<Button colorScheme='red' onClick={onDelete} ml={3}>
 								Delete
 							</Button>
 						</AlertDialogFooter>
@@ -687,9 +747,21 @@ const TaskItem = (props: { label: string; completed?: boolean }) => {
 					pos='absolute'
 					left='2'
 					zIndex={10}
+					defaultChecked={props.task.completed}
+					onChange={(e) => {
+						updateTask(auth.state.user?.uid!, selectedList!.id, props.task.id, {
+							completed: !props.task.completed,
+						})
+					}}
 				/>
-				<Text fontSize='xs' pl='8' py='2'>
-					{props.label}
+				<Text
+					fontSize='xs'
+					pl='8'
+					py='2'
+					textDecoration={props.task.completed ? 'line-through' : undefined}
+					color={props.task.completed ? 'gray.500' : undefined}
+				>
+					{props.task.text}
 				</Text>
 				<HStack
 					spacing='2'

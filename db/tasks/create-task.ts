@@ -8,10 +8,10 @@ export const createTask = async (
 	data: Omit<Task, 'id' | 'completed'>
 ): Promise<void> => {
 	try {
-		await addDoc(
-			collection(db, 'users', userId, 'lists', listId, 'tasks'),
-			data
-		)
+		await addDoc(collection(db, 'users', userId, 'lists', listId, 'tasks'), {
+			...data,
+			completed: false,
+		})
 	} catch (error) {
 		throw error
 	}
